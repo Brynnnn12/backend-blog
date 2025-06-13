@@ -13,6 +13,7 @@ module.exports = {
       name: {
         type: Sequelize.STRING(20),
         allowNull: false,
+        unique: true, // Tambahkan unique constraint
       },
       createdAt: {
         allowNull: false,
@@ -23,6 +24,9 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+
+    //index untuk kolom name
+    await queryInterface.addIndex("roles", ["name"]);
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("roles");
