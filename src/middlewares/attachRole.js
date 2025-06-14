@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 const { Users, Roles } = require("../models");
 
-module.exports = async (req, res, next) => {
+exports.attachRole = async (req, res, next) => {
   try {
     const user = await Users.findByPk(req.user.id, {
       include: [{ model: Roles, as: "role", attributes: ["name"] }],
