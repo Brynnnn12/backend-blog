@@ -11,60 +11,47 @@ const { verifyToken } = require("../utils/jwtUtils");
  */
 exports.authMiddleware = async (req, res, next) => {
   try {
-    let token;
+    let token = null;
 
-    // Ekstrak token dari header atau cookies
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
     ) {
       token = req.headers.authorization.split(" ")[1];
-    } else if (req.cookies && req.cookies.jwt) {
+    } else if (req.cookies?.jwt) {
       token = req.cookies.jwt;
     }
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Anda belum login, silakan login terlebih dahulu",
+        message: "Anda belum login",
       });
     }
 
-    // Verifikasi token menggunakan fungsi verifyToken dari jwtUtils
     const decoded = verifyToken(token);
 
     if (!decoded) {
       return res.status(401).json({
         success: false,
-        message: "Token tidak valid atau sudah kedaluwarsa",
+        message: "Token tidak valid atau kedaluwarsa",
       });
     }
 
-    // Cari user dengan role
-    const currentUser = await Users.findByPk(decoded.id, {
-      include: [{ model: Roles, as: "role", attributes: ["name"] }],
+    const user = await Users.findByPk(decoded.id, {
+      attributes: ["id"],
     });
 
-    if (!currentUser) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User tidak ditemukan atau tidak aktif",
+        message: "User tidak ditemukan",
       });
     }
 
-    // // Periksa apakah token diterbitkan sebelum password diubah
-    // if (decoded.iat < new Date(currentUser.updatedAt).getTime() / 1000) {
-    //   return res.status(401).json({
-    //     success: false,
-    //     message: "User baru-baru ini mengubah password, silakan login kembali",
-    //   });
-    // }
-
-    // Tambahkan user ke request object
-    req.user = currentUser;
+    req.user = { id: user.id }; // Simpan seminimal mungkin
     next();
-  } catch (error) {
-    // Untuk error lainnya
+  } catch (err) {
     return res.status(500).json({
       success: false,
       message: "Terjadi kesalahan autentikasi",

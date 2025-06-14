@@ -5,6 +5,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const routes = require("./routes/index");
 const cookieParser = require("cookie-parser");
+const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const path = require("path");
 
 const app = express();
@@ -27,6 +28,8 @@ app.use("/api/v1", routes);
 /**
  * * * Error handling middleware
  */
+app.use(notFound);
+app.use(errorHandler);
 
 /**
  * *Port

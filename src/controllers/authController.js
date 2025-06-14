@@ -31,7 +31,7 @@ exports.register = asyncHandler(async (req, res) => {
     password,
   });
 
-  return createSendToken(newUser, 201, res);
+  return createSendToken(newUser, 201, res, "Registrasi berhasil");
 });
 
 exports.login = asyncHandler(async (req, res) => {
@@ -59,7 +59,7 @@ exports.login = asyncHandler(async (req, res) => {
       .json({ status: "fail", message: "Email atau password salah" });
   }
 
-  return createSendToken(userLogin, 200, res);
+  return createSendToken(userLogin, 200, res, "Login berhasil");
 });
 
 exports.logout = asyncHandler(async (req, res) => {

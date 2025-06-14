@@ -10,7 +10,7 @@ exports.signToken = (id) => {
 };
 
 // Fungsi untuk membuat dan mengirim token ke client sebagai cookie
-exports.createSendToken = (user, statusCode, res) => {
+exports.createSendToken = (user, statusCode, res, message) => {
   const token = exports.signToken(user.id);
 
   const cookieOptions = {
@@ -24,7 +24,7 @@ exports.createSendToken = (user, statusCode, res) => {
 
   res.status(statusCode).json({
     status: "success",
-    message: "Berhasil login",
+    message,
     token,
     data: {
       username: user.username,
