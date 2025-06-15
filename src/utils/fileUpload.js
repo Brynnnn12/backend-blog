@@ -24,9 +24,20 @@ const postStorage = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const userId = req.user?.id || "guest";
+    // Gunakan title yang akan dijadikan slug (jika ada dalam body)
+    const title = req.body?.title || "";
+    // Buat slug sederhana dari title (lowercase, ganti spasi dengan dash)
+    const slugText = title
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]+/g, "");
+
+    // Tambahkan unique ID pendek untuk mencegah collision
+    const uniqueId = uuidv4().substring(0, 8);
     const ext = path.extname(file.originalname);
-    cb(null, `post-${userId}-${uuidv4()}${ext}`);
+
+    // Format: post-slug-uniqueid.ext
+    cb(null, `post-${slugText}-${uniqueId}${ext}`);
   },
 });
 

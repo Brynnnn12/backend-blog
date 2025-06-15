@@ -4,6 +4,7 @@ const roleRoutes = require("./roleRoutes");
 const authRoutes = require("./authRoutes");
 const profileRoutes = require("./profileRoutes");
 const categoryRoutes = require("./categoryRoute");
+const postRoutes = require("./postRoutes");
 
 const {
   permissionMiddleware,
@@ -22,8 +23,11 @@ router.use(
   "/categories",
   authMiddleware,
   attachRole,
-  permissionMiddleware("User"),
+  permissionMiddleware("Admin"),
   categoryRoutes
 );
+
+// Route untuk posts
+router.use("/posts", authMiddleware, postRoutes);
 
 module.exports = router;

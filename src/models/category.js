@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 "use strict";
 const { Model } = require("sequelize");
 const slugify = require("slugify");
@@ -10,7 +9,11 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // Relasi dengan Posts
+      Category.hasMany(models.Posts, {
+        foreignKey: "categoryId",
+        as: "posts",
+      });
     }
   }
   Category.init(

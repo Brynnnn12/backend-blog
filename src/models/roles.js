@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
@@ -9,7 +8,11 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // Relasi dengan Users
+      Roles.hasMany(models.Users, {
+        foreignKey: "roleId",
+        as: "users",
+      });
     }
   }
   Roles.init(
