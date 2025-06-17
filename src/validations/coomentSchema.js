@@ -13,11 +13,6 @@ exports.commentSchema = Joi.object({
     "string.uuid": "ID postingan harus dalam format UUID yang valid",
     "any.required": "ID postingan wajib diisi",
   }),
-  userId: Joi.string().uuid().required().messages({
-    "string.base": "ID pengguna harus berupa UUID",
-    "string.uuid": "ID pengguna harus dalam format UUID yang valid",
-    "any.required": "ID pengguna wajib diisi",
-  }),
 });
 
 exports.validateComment = (data) => {
@@ -26,4 +21,12 @@ exports.validateComment = (data) => {
     throw new Error(error.details[0].message);
   }
   return true;
+};
+
+exports.validateComment = (data) => {
+  const { error, value } = exports.commentSchema.validate(data);
+  if (error) {
+    throw new Error(error.details[0].message);
+  }
+  return value;
 };

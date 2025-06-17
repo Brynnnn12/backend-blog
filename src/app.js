@@ -13,7 +13,12 @@ const app = express();
 /**
  * * Middleware
  */
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5000", // Ganti dengan URL frontend Anda
+    credentials: true, // Izinkan cookies untuk dikirim
+  })
+);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -6,16 +6,15 @@ const {
   show,
   update,
   destroy,
-} = require("../controllers/postControllers");
-const { uploadPost } = require("../utils/fileUpload");
+} = require("../controllers/commentController");
 const { protect } = require("../middlewares/authMiddleware");
 
 router.use(protect); // Ensure all routes are protected
 
 router.get("/", index);
-router.post("/", uploadPost.single("image"), store);
-router.get("/:slug", show);
-router.put("/:slug", uploadPost.single("image"), update);
-router.delete("/:slug", destroy);
+router.post("/", store);
+router.get("/:id", show);
+router.put("/:id", update);
+router.delete("/:id", destroy);
 
 module.exports = router;

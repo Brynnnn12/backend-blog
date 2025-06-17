@@ -6,14 +6,18 @@ const {
   update,
   destroy,
 } = require("../controllers/roleControllers");
+const { protect, authorize } = require("../middlewares/authMiddleware");
+
+// Middleware untuk melindungi semua route ini
+router.use(protect); // Pastikan semua route dilindungi
 
 // Route untuk mendapatkan semua role
-router.get("/", index);
+router.get("/", authorize("Admin"), index);
 // Route untuk menambahkan role baru
-router.post("/", store);
+router.post("/", authorize("Admin"), store);
 // Route  untuk update role berdasarkan ID
-router.put("/:id", update);
+router.put("/:id", authorize("Admin"), update);
 // Route untuk menghapus role berdasarkan ID
-router.delete("/:id", destroy);
+router.delete("/:id", authorize("Admin"), destroy);
 
 module.exports = router;
