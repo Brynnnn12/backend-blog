@@ -1,8 +1,9 @@
 const asyncHandler = require("express-async-handler");
 const { Category } = require("../models");
-const { categorySchema } = require("../validations/categorySchema");
+const { validateCategory } = require("../validations/categorySchema");
 const { paginate } = require("../utils/paginate");
 const { Op } = require("sequelize");
+const { generateSlug } = require("../utils/slugGenerator");
 
 /**
  * Get all category
@@ -32,23 +33,26 @@ exports.index = asyncHandler(async (req, res) => {
  * @access Private
  */
 exports.store = asyncHandler(async (req, res) => {
-  const { error, value } = categorySchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
+  const { name } = validateCategory(req.body);
 
-  const { name } = value;
-
+  // Cek jika kategori dengan nama sama sudah ada
   const existingCategory = await Category.findOne({ where: { name } });
   if (existingCategory) {
-    return res.status(400).json({ message: "Category already exists" });
+    return res.status(400).json({
+      status: "fail",
+      message: "Kategori dengan nama tersebut sudah ada",
+    });
   }
 
-  const newCategory = await Category.create({ name });
+  // Buat slug manual agar eksplisit dan konsisten
+  const slug = generateSlug(name);
+
+  // Buat kategori baru (slug akan otomatis digenerate via hook)
+  const newCategory = await Category.create({ name, slug });
 
   return res.status(201).json({
     status: "success",
-    message: "Kategori Berhasil dibuat",
+    message: "Kategori berhasil dibuat",
     data: {
       name: newCategory.name,
       slug: newCategory.slug,
@@ -62,38 +66,43 @@ exports.store = asyncHandler(async (req, res) => {
  * @param {string} slug - The slug of the category to update
  * @access Private
  */
-
 exports.update = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const { error, value } = categorySchema.validate(req.body);
-
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
-
-  const { name } = value;
+  const { name } = validateCategory(req.body);
 
   // Cari kategori berdasarkan slug
   const category = await Category.findOne({ where: { slug } });
   if (!category) {
-    return res.status(404).json({ message: "Category not found" });
+    return res.status(404).json({
+      status: "fail",
+      message: "Kategori tidak ditemukan",
+    });
   }
 
-  // Cek duplikat nama
+  // Cek duplikat nama (kecuali kategori yang sedang diupdate)
   const existingCategory = await Category.findOne({
-    where: { name, id: { [Op.ne]: category.id } },
+    where: {
+      name,
+      id: { [Op.ne]: category.id },
+    },
   });
   if (existingCategory) {
-    return res.status(400).json({ message: "Category already exists" });
+    return res.status(400).json({
+      status: "fail",
+      message: "Kategori dengan nama tersebut sudah ada",
+    });
   }
 
-  // Update kategori (slug akan otomatis diperbarui oleh hook)
-  await category.update({ name }, { validate: true });
+  // Perbarui nama (slug akan ikut diperbarui via hook)
+  category.name = name;
+  category.slug = generateSlug(name); // Generate slug baru
+  await category.save();
 
   return res.status(200).json({
     status: "success",
-    message: "Kategori berhasil diupdate",
+    message: "Kategori berhasil diperbarui",
     data: {
+      id: category.id,
       name: category.name,
       slug: category.slug,
     },

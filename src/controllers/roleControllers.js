@@ -1,6 +1,6 @@
 const { Op } = require("sequelize");
 const { Roles } = require("../models");
-const { roleSchema } = require("../validations/roleSchema");
+const { validateRole } = require("../validations/roleSchema");
 const asyncHandler = require("express-async-handler");
 const { paginate } = require("../utils/paginate");
 
@@ -30,12 +30,7 @@ exports.index = asyncHandler(async (req, res) => {
  * @param {Object} res - The response object
  */
 exports.store = asyncHandler(async (req, res) => {
-  const { error, value } = roleSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
-
-  const { name } = value;
+  const { name } = validateRole(req.body);
 
   const existingRole = await Roles.findOne({ where: { name } });
   if (existingRole) {
@@ -58,12 +53,7 @@ exports.store = asyncHandler(async (req, res) => {
 exports.update = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { error, value } = roleSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
-
-  const { name } = value;
+  const { name } = validateRole(req.body);
 
   const role = await Roles.findByPk(id);
   if (!role) {

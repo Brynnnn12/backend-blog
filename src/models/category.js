@@ -1,6 +1,5 @@
 "use strict";
 const { Model } = require("sequelize");
-const slugify = require("slugify");
 module.exports = (sequelize, DataTypes) => {
   class Category extends Model {
     /**
@@ -37,20 +36,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: "Category",
       tableName: "categories",
-      hooks: {
-        beforeValidate: (category) => {
-          // Cek apakah ini instance baru atau nama telah diubah
-          if (
-            category.name &&
-            (category.isNewRecord || category.changed("name"))
-          ) {
-            category.slug = slugify(category.name, {
-              lower: true,
-              strict: true,
-            });
-          }
-        },
-      },
     }
   );
   return Category;

@@ -3,45 +3,32 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("posts", {
+    await queryInterface.createTable("comments", {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
       },
-      title: {
-        type: Sequelize.STRING(50),
-        allowNull: false,
-      },
-      slug: {
-        type: Sequelize.STRING(50),
-        allowNull: false,
-        unique: true,
-      },
       content: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-      },
-      image: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      userId: {
+      postId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "users", // Assuming you have a Users table
+          model: "posts",
           key: "id",
         },
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       },
-      categoryId: {
+      userId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: "categories",
+          model: "users",
           key: "id",
         },
         onDelete: "CASCADE",
@@ -56,15 +43,13 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
-
     // ✅ Tambahkan index dengan nama sederhana
-    await queryInterface.addIndex("posts", ["slug"]);
-
-    await queryInterface.addIndex("posts", ["userId"]);
-
-    await queryInterface.addIndex("posts", ["categoryId"]);
+    // Index sederhana dan optimal
+    await queryInterface.addIndex("comments", ["postId"]);
+    await queryInterface.addIndex("comments", ["userId"]);
+    await queryInterface.addIndex("comments", ["createdAt"]);
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("posts");
+    await queryInterface.dropTable("comments");
   },
 };

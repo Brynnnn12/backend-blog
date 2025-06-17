@@ -16,3 +16,11 @@ exports.categorySchema = Joi.object({
       "any.required": "Nama kategori wajib diisi",
     }),
 });
+
+exports.validateCategory = (data) => {
+  const { error, value } = exports.categorySchema.validate(data);
+  if (error) {
+    throw new Error(error.details[0].message);
+  }
+  return value;
+};

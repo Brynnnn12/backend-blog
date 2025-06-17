@@ -16,3 +16,11 @@ exports.roleSchema = Joi.object({
       "any.required": "Nama peran wajib diisi",
     }),
 });
+
+exports.validateRole = (data) => {
+  const { error, value } = exports.roleSchema.validate(data);
+  if (error) {
+    throw new Error(error.details[0].message);
+  }
+  return value;
+};

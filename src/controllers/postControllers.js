@@ -6,6 +6,7 @@ const { paginate } = require("../utils/paginate");
 const { Op } = require("sequelize");
 const path = require("path");
 const { validateImage, deleteImage } = require("../utils/validateImage");
+const { generateSlug } = require("../utils/slugGenerator");
 
 const IMAGE_PATH = path.join(__dirname, "../public/uploads/posts");
 /**
@@ -47,52 +48,38 @@ exports.index = asyncHandler(async (req, res) => {
  */
 exports.store = asyncHandler(async (req, res) => {
   const { error, value } = postSchema.validate(req.body);
+
   if (error) {
-    // Hapus file yang sudah diupload jika validasi gagal
-    if (req.file) {
-      const imagePath = path.join(IMAGE_PATH, req.file.filename);
-      deleteImage(imagePath);
-    }
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
     return res.status(400).json({ message: error.details[0].message });
   }
 
   const { title, content, categoryId } = value;
 
-  const existingPost = await Posts.findOne({ where: { title } });
+  const [existingPost, categoryExists] = await Promise.all([
+    Posts.findOne({ where: { title } }),
+    Category.findByPk(categoryId, { attributes: ["id", "name"] }),
+  ]);
+
   if (existingPost) {
-    if (req.file) {
-      // Hapus file yang sudah diupload jika judul sudah ada
-      const imagePath = path.join(IMAGE_PATH, req.file.filename);
-      deleteImage(imagePath);
-    }
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
     return res.status(400).json({ message: "Judul postingan sudah digunakan" });
   }
 
-  const categoryExists = await Category.findByPk(categoryId, {
-    attributes: ["id", "name"],
-  });
   if (!categoryExists) {
-    if (req.file) {
-      // Hapus file yang sudah diupload jika kategori tidak ditemukan
-      const imagePath = path.join(IMAGE_PATH, req.file.filename);
-      deleteImage(imagePath);
-    }
-    return res.status(404).json({
-      status: "fail",
-      message: "Kategori tidak ditemukan",
-    });
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(404).json({ message: "Kategori tidak ditemukan" });
   }
 
   const imageError = validateImage(req);
   if (imageError) {
-    return res.status(400).json({
-      status: "fail",
-      message: imageError,
-    });
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(400).json({ message: imageError });
   }
 
   const newPost = await Posts.create({
     title,
+    slug: generateSlug(title),
     content,
     image: req.file.filename,
     userId: req.user.id,
@@ -103,13 +90,9 @@ exports.store = asyncHandler(async (req, res) => {
     status: "success",
     message: "Postingan berhasil dibuat",
     data: {
-      id: newPost.id,
       title: newPost.title,
-      slug: newPost.slug,
       content: newPost.content,
       image: newPost.image,
-      userId: newPost.userId,
-      categoryId: newPost.categoryId,
     },
   });
 });
@@ -125,17 +108,17 @@ exports.show = asyncHandler(async (req, res) => {
 
   const post = await Posts.findOne({
     where: { slug },
-    attributes: ["title", "slug", "content", "image", "createdAt", "updatedAt"],
+    attributes: ["title", "content", "image", "createdAt", "updatedAt"],
     include: [
       {
         model: Users,
         as: "user",
-        attributes: ["id", "username"],
+        attributes: ["username"],
       },
       {
         model: Category,
         as: "category",
-        attributes: ["id", "name", "slug"],
+        attributes: ["name"],
       },
     ],
   });
@@ -165,115 +148,75 @@ exports.update = asyncHandler(async (req, res) => {
   const { error, value } = postSchema.validate(req.body);
 
   if (error) {
-    return res.status(400).json({
-      status: "fail",
-      message: error.details[0].message,
-    });
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(400).json({ message: error.details[0].message });
   }
 
   const { title, content, categoryId } = value;
 
-  // Cari post berdasarkan slug
   const post = await Posts.findOne({ where: { slug } });
   if (!post) {
-    return res.status(404).json({
-      status: "fail",
-      message: "Postingan tidak ditemukan",
-    });
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(404).json({ message: "Postingan tidak ditemukan" });
   }
 
-  // Verifikasi pemilik post
   if (post.userId !== req.user.id) {
-    return res.status(403).json({
-      status: "fail",
-      message: "Anda tidak memiliki akses untuk mengubah postingan ini",
-    });
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(403).json({ message: "Anda tidak memiliki akses" });
   }
 
-  // Cek kategori
-  const categoryExists = await Category.findByPk(categoryId, {
-    attributes: ["id", "name"],
-  });
+  const [existingPost, categoryExists] = await Promise.all([
+    title !== post.title
+      ? Posts.findOne({ where: { title, id: { [Op.ne]: post.id } } })
+      : null,
+    Category.findByPk(categoryId),
+  ]);
+
+  if (existingPost) {
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(400).json({ message: "Judul postingan sudah digunakan" });
+  }
+
   if (!categoryExists) {
-    // Hapus file baru yang gagal validasi
-    if (req.file) {
-      const newImagePath = path.join(IMAGE_PATH, req.file.filename);
-      deleteImage(newImagePath);
-    }
-    return res.status(404).json({
-      status: "fail",
-      message: "Kategori tidak ditemukan",
-    });
-  }
-  // Cek duplikat judul, kecuali judul sendiri
-  if (title !== post.title) {
-    const existingPost = await Posts.findOne({
-      where: {
-        title,
-        id: { [Op.ne]: post.id },
-      },
-    });
-
-    if (existingPost) {
-      // Hapus file baru yang gagal validasi
-      if (req.file) {
-        const newImagePath = path.join(IMAGE_PATH, req.file.filename);
-        deleteImage(newImagePath);
-      }
-      return res.status(400).json({
-        status: "fail",
-        message: "Judul postingan sudah digunakan",
-      });
-    }
+    if (req.file) deleteImage(path.join(IMAGE_PATH, req.file.filename));
+    return res.status(404).json({ message: "Kategori tidak ditemukan" });
   }
 
-  // Update data post
-  const updateData = { title, content, categoryId };
-
-  // Handle gambar jika ada
   if (req.file) {
     const imageError = validateImage(req);
     if (imageError) {
-      // Hapus file baru yang gagal validasi
-      const newImagePath = path.join(IMAGE_PATH, req.file.filename);
-      deleteImage(newImagePath);
-      return res.status(400).json({
-        status: "fail",
-        message: imageError,
-      });
+      deleteImage(path.join(IMAGE_PATH, req.file.filename));
+      return res.status(400).json({ message: imageError });
     }
 
     // Hapus gambar lama jika ada
     if (post.image) {
       try {
-        const oldImagePath = path.join(IMAGE_PATH, post.image);
-        console.log(`Mencoba menghapus file lama: ${oldImagePath}`);
-        deleteImage(oldImagePath);
-      } catch (error) {
-        console.error(`Gagal menghapus gambar lama: ${error.message}`);
-        // Lanjutkan proses meskipun gagal menghapus
+        deleteImage(path.join(IMAGE_PATH, post.image));
+      } catch (e) {
+        console.error("Gagal hapus gambar lama:", e.message);
       }
     }
 
-    updateData.image = req.file.filename;
+    post.image = req.file.filename;
   }
 
-  // Update post
-  // Update post
-  await post.update(updateData, { validate: true });
+  post.title = title;
+  post.slug = generateSlug(title); // Update slug jika title berubah
+  post.content = content;
+  post.categoryId = categoryId;
 
-  // Gunakan instance yang sama untuk response
+  await post.save(); // akan trigger `beforeSave` untuk update slug jika title berubah
+
   return res.status(200).json({
     status: "success",
     message: "Postingan berhasil diperbarui",
     data: {
-      id: post.id,
       title: post.title,
-      slug: post.slug, // Ambil slug dari instance yang diupdate
+      slug: post.slug,
       content: post.content,
       image: post.image,
       updatedAt: post.updatedAt,
-      category: post.category, // Mungkin perlu ambil category terpisah
     },
   });
 });

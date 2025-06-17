@@ -1,6 +1,5 @@
 "use strict";
 const { Model } = require("sequelize");
-const { default: slugify } = require("slugify");
 module.exports = (sequelize, DataTypes) => {
   class Posts extends Model {
     /**
@@ -77,34 +76,18 @@ module.exports = (sequelize, DataTypes) => {
       categoryId: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: {
+          model: "categories",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       },
     },
     {
       sequelize,
       modelName: "Posts",
       tableName: "posts",
-      hooks: {
-        // Hook untuk membuat slug otomatis dari judul
-        beforeValidate: (post) => {
-          if (post.title && !post.slug) {
-            const newSlug = slugify(post.title, {
-              lower: true,
-              strict: true,
-            });
-            post.slug = newSlug;
-          }
-        },
-        beforeSave: (post) => {
-          if (post.title && post.changed("title")) {
-            const newSlug = slugify(post.title, {
-              lower: true,
-              strict: true,
-            });
-            console.log("Slug akan diupdate jadi:", newSlug);
-            post.slug = newSlug;
-          }
-        },
-      },
     }
   );
   return Posts;

@@ -28,6 +28,9 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+    // ✅ Tambahkan index dengan nama sederhana
+    await queryInterface.addIndex("categories", ["name"]);
+    await queryInterface.addIndex("categories", ["slug"]);
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable("categories");

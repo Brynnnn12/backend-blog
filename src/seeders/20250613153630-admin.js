@@ -25,7 +25,7 @@ module.exports = {
         username: "Admin",
         email: "admin@gmail.com",
         password: hashedPassword,
-        roleId: "27a21421-b4bb-4630-84db-9318222deefa", // Pastikan roleId ini valid di tabel Roles
+        roleId: "25389a66-e8e3-4260-8f62-084dbb0eb3e9", // Pastikan roleId ini valid di tabel Roles
         createdAt: new Date(),
         updatedAt: new Date(),
       },

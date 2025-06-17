@@ -13,7 +13,13 @@ const {
 const { attachRole } = require("../middlewares/attachRole");
 
 // Route untuk mendapatkan semua role
-router.use("/roles", authMiddleware, permissionMiddleware("Admin"), roleRoutes);
+router.use(
+  "/roles",
+  authMiddleware,
+  attachRole,
+  permissionMiddleware("Admin"),
+  roleRoutes
+);
 // Route untuk autentikasi
 router.use("/", authRoutes);
 // Route untuk profile
