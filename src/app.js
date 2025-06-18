@@ -2,49 +2,66 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const morgan = require("morgan");
-const routes = require("./routes/index");
-const cookieParser = require("cookie-parser");
-const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const path = require("path");
+const cookieParser = require("cookie-parser");
+const { logger, morganMiddleware } = require("./config/logger");
+const routes = require("./routes/index");
+const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
+const setupSwagger = require("./config/swagger");
 
 const app = express();
 
 /**
- * * Middleware
+ * Konfigurasi Aplikasi
+ */
+const PORT = process.env.PORT || 3000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+/**
+ * Middleware
  */
 app.use(
   cors({
-    origin: "http://localhost:5000", // Ganti dengan URL frontend Anda
-    credentials: true, // Izinkan cookies untuk dikirim
+    origin: FRONTEND_URL,
+    credentials: true,
   })
 );
-app.use(morgan("dev"));
+
+app.use(morganMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 /**
- * * Routes
+ * Setup Dokumentasi API
+ */
+setupSwagger(app);
+
+/**
+ * Routing
  */
 app.use("/api/v1", routes);
 
 /**
- * * * Error handling middleware
+ * Error Handling
  */
 app.use(notFound);
 app.use(errorHandler);
 
 /**
- * *Port
- * Ambil PORT dari env
- */
-const PORT = process.env.PORT || 3000; // fallback ke 3000 kalau PORT di env kosong
-
-/**
- * * Listen
+ * Inisialisasi Server
  */
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`🚀 Server berjalan dalam mode ${NODE_ENV} pada port ${PORT}`);
+  logger.info(
+    `📚 Dokumentasi API tersedia di http://localhost:${PORT}/api-docs`
+  );
+
+  // Hanya tampilkan di development
+  if (NODE_ENV === "development") {
+    logger.debug("🔧 Mode pengembangan aktif");
+    logger.debug(`🌐 Frontend URL: ${FRONTEND_URL}`);
+  }
 });

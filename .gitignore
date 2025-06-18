@@ -1,5 +1,11 @@
 
 /node_modules
 
+/logs/*.log
+/src/config/logs
+
+/src/public/uploads
+
+
 
 .env
