@@ -1,164 +1,70 @@
 /* eslint-disable no-undef */
 const path = require("path");
 const fs = require("fs");
-const morgan = require("morgan");
 const winston = require("winston");
-const { combine, timestamp, printf, colorize, align, errors } = winston.format;
+const morgan = require("morgan");
 
-// =============================================
-// KONFIGURASI LOGGER
-// =============================================
+// 1. Setup logs directory
+const logsDir = path.join(__dirname, "logs");
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir);
+}
 
-// 1. Konfigurasi Warna untuk Logging
-const logColors = {
-  error: "red",
-  warn: "yellow",
-  info: "green",
-  http: "magenta",
-  debug: "cyan",
-  verbose: "blue",
-};
-
-winston.addColors(logColors);
-
-// 2. Buat folder logs jika belum ada
-const ensureLogsDirectory = (logDir) => {
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-};
-
-const logsDir =
-  process.env.NODE_ENV === "production"
-    ? path.join(process.cwd(), "logs")
-    : path.join(__dirname, "logs");
-
-ensureLogsDirectory(logsDir);
-
-// 3. Format Logging yang Lebih Kaya
-const advancedFormat = combine(
-  errors({ stack: true }), // Menampilkan stack trace untuk error
-  timestamp({
-    format: "YYYY-MM-DD HH:mm:ss.SSS",
-  }),
-  colorize({ all: true }),
-  align(),
-  printf(({ timestamp, level, message, stack }) => {
-    const logMessage = `[${timestamp}] ${level}: ${message}`;
-    return stack ? `${logMessage}\n${stack}` : logMessage;
-  })
-);
-
-// 4. Transport Configuration
-const transports = {
-  console: new winston.transports.Console({
-    format: advancedFormat,
-    level: process.env.LOG_LEVEL || "debug",
-  }),
-  errorFile: new winston.transports.File({
-    filename: path.join(logsDir, "error.log"),
-    level: "error",
-    format: combine(
-      timestamp(),
-      printf(({ timestamp, level, message, stack }) => {
-        return `[${timestamp}] ${level}: ${stack || message}`;
-      })
-    ),
-    maxsize: 5242880, // 5MB
-    maxFiles: 7, // Keep 7 days
-  }),
-  combinedFile: new winston.transports.File({
-    filename: path.join(logsDir, "combined.log"),
-    format: combine(
-      timestamp(),
-      printf(({ timestamp, level, message }) => {
-        return `[${timestamp}] ${level}: ${message}`;
-      })
-    ),
-    maxsize: 5242880,
-    maxFiles: 7,
-  }),
-  exceptions: new winston.transports.File({
-    filename: path.join(logsDir, "exceptions.log"),
-    handleExceptions: true,
-    maxsize: 5242880,
-    maxFiles: 7,
-  }),
-  rejections: new winston.transports.File({
-    filename: path.join(logsDir, "rejections.log"),
-    handleRejections: true,
-    maxsize: 5242880,
-    maxFiles: 7,
-  }),
-};
-
-// 5. Logger Configuration
+// 2. Winston configuration
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || "info",
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
+  format: winston.format.combine(
+    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
   transports: [
-    transports.console,
+    // Console transport with colorized output for development
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, stack }) => {
+          return `[${timestamp}] ${level}: ${stack || message}`;
+        })
+      ),
+    }),
+    // File transport for errors in production
     ...(process.env.NODE_ENV === "production"
-      ? [transports.errorFile, transports.combinedFile]
+      ? [
+          new winston.transports.File({
+            filename: path.join(logsDir, "error.log"),
+            level: "error",
+          }),
+          new winston.transports.File({
+            filename: path.join(logsDir, "combined.log"),
+          }),
+        ]
       : []),
   ],
-  exceptionHandlers: [transports.exceptions],
-  rejectionHandlers: [transports.rejections],
-  exitOnError: false, // Jangan exit pada handled exceptions
 });
 
-// =============================================
-// KONFIGURASI MORGAN
-// =============================================
-
-// 1. Custom Morgan Tokens
-morgan.token("id", (req) => req.id || "NO_REQUEST_ID");
-morgan.token("body", (req) => JSON.stringify(req.body));
-
-// 2. Morgan Middleware Configuration
+// 3. Morgan configuration for HTTP logging
 const morganMiddleware = morgan(
-  process.env.NODE_ENV === "development"
-    ? ":method :url :status :response-time ms - :res[content-length]"
-    : "[:date[iso]] :id :method :url :status :response-time ms :res[content-length] - :body",
+  process.env.NODE_ENV === "development" ? "dev" : "combined",
   {
     stream: {
-      write: (message) => {
-        const status = message.split(" ")[2];
-
-        if (status >= 400) {
-          logger.error(`HTTP ${message.trim()}`);
-        } else if (status >= 300) {
-          logger.warn(`HTTP ${message.trim()}`);
-        } else {
-          logger.http(`HTTP ${message.trim()}`);
-        }
-      },
+      write: (message) => logger.info(message.trim()),
     },
-    skip: (req) => req.originalUrl === "/healthcheck", // Skip healthcheck
+    skip: (req) => req.originalUrl === "/healthcheck",
   }
 );
 
-// =============================================
-// UTILITAS TAMBAHAN
-// =============================================
-
-// Fungsi untuk log unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
-  logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+// Handle uncaught exceptions and rejections
+process.on("unhandledRejection", (error) => {
+  logger.error("Unhandled Rejection:", error);
 });
 
-// Fungsi untuk log uncaught exceptions
 process.on("uncaughtException", (error) => {
-  logger.error(`Uncaught Exception: ${error.message}`, error);
+  logger.error("Uncaught Exception:", error);
   process.exit(1);
 });
 
-// Export logger dan middleware
 module.exports = {
   logger,
   morganMiddleware,
-  // Export untuk testing
-  _test: {
-    logsDir,
-    transports,
-  },
 };
