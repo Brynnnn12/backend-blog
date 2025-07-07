@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const { Users } = require("../models");
+const { Users, Roles } = require("../models");
 const { createSendToken } = require("../utils/jwtUtils");
 const { registerSchema, loginSchema } = require("../validations/authSchema");
 
@@ -71,5 +71,39 @@ exports.logout = asyncHandler(async (req, res) => {
   return res.status(200).json({
     status: "success",
     message: "Logout berhasil",
+  });
+});
+
+exports.getMe = asyncHandler(async (req, res) => {
+  // Cek apakah user sudah login
+  if (!req.user) {
+    return res.status(401).json({
+      status: "fail",
+      message: "Anda harus login terlebih dahulu",
+    });
+  }
+
+  // Ambil data user dari database
+  const user = await Users.findByPk(req.user.id, {
+    attributes: ["username", "email", "createdAt"],
+    include: [
+      {
+        model: Roles,
+        as: "role",
+        attributes: ["name"],
+      },
+    ],
+  });
+
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "User tidak ditemukan",
+    });
+  }
+
+  return res.status(200).json({
+    status: "success",
+    data: user,
   });
 });

@@ -14,11 +14,10 @@ exports.postSchema = Joi.object({
     "string.min": "Konten minimal {#limit} karakter",
     "any.required": "Konten wajib diisi",
   }),
-  //validasi pakai uuid untuk categoryId
   categoryId: Joi.string().uuid().required().messages({
     "string.base": "ID Kategori harus berupa teks",
     "string.empty": "ID Kategori tidak boleh kosong",
-    "string.uuid": "ID Kategori harus dalam format UUID yang valid",
+    "string.guid": "ID Kategori harus berupa UUID yang valid",
     "any.required": "ID Kategori wajib diisi",
   }),
 });

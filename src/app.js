@@ -15,7 +15,7 @@ const app = express();
  * Konfigurasi Aplikasi
  */
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
+const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 /**

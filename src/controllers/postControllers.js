@@ -46,6 +46,61 @@ exports.index = asyncHandler(async (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
+
+/**
+ * @desc Get user's posts (PRIVATE - untuk dashboard)
+ * @route GET /api/posts/my-posts
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getMyPosts = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, search } = req.query;
+  const userId = req.user.id;
+
+  // Filter berdasarkan user dan search jika ada
+  let whereClause = { userId };
+
+  if (search) {
+    whereClause = {
+      ...whereClause,
+      [Op.or]: [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { content: { [Op.iLike]: `%${search}%` } },
+      ],
+    };
+  }
+
+  const result = await paginate({
+    model: Posts,
+    page,
+    limit,
+    where: whereClause,
+    attributes: [
+      "id",
+      "title",
+      "slug",
+      "content",
+      "image",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: Category,
+        as: "category",
+        attributes: ["id", "name"],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
+
+  return res.status(200).json({
+    status: "success",
+    message: "Postingan Anda berhasil diambil",
+    ...result,
+  });
+});
+
 exports.store = asyncHandler(async (req, res) => {
   const { error, value } = postSchema.validate(req.body);
 

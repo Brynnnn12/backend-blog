@@ -1,6 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, logout } = require("../controllers/authController");
+const {
+  register,
+  login,
+  logout,
+  getMe,
+} = require("../controllers/authController");
 const { protect } = require("../middlewares/authMiddleware");
 
 /**
@@ -142,5 +147,36 @@ router.post("/login", login);
  */
 
 router.post("/logout", protect, logout);
+
+/**
+ * @swagger
+ * /me:
+ *   get:
+ *     summary: Mendapatkan informasi pengguna yang sedang masuk
+ *     tags: [Autentikasi]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Informasi pengguna berhasil diambil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ */
+router.get("/me", protect, getMe);
 
 module.exports = router;

@@ -6,10 +6,11 @@ const {
   show,
   update,
   destroy,
+  allComments,
 } = require("../controllers/commentController");
 const { protect } = require("../middlewares/authMiddleware");
 
-router.use(protect);
+router.get("/", allComments);
 
 /**
  * @swagger
@@ -53,7 +54,7 @@ router.use(protect);
  *       401:
  *         description: Tidak terotentikasi
  */
-router.get("/", index);
+router.get("/posts/:slug", index);
 
 /**
  * @swagger
@@ -88,7 +89,7 @@ router.get("/", index);
  *       401:
  *         description: Tidak terotentikasi
  */
-router.post("/", store);
+router.post("/posts/:slug", protect, store);
 
 /**
  * @swagger
@@ -124,7 +125,7 @@ router.post("/", store);
  *       404:
  *         description: Komentar tidak ditemukan
  */
-router.get("/:id", show);
+router.get("/:id", protect, show);
 
 /**
  * @swagger
@@ -170,7 +171,7 @@ router.get("/:id", show);
  *       404:
  *         description: Komentar tidak ditemukan
  */
-router.put("/:id", update);
+router.put("/:id", protect, update);
 
 /**
  * @swagger
@@ -197,6 +198,6 @@ router.put("/:id", update);
  *       404:
  *         description: Komentar tidak ditemukan
  */
-router.delete("/:id", destroy);
+router.delete("/:id", protect, destroy);
 
 module.exports = router;

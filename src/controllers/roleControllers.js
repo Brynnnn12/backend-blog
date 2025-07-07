@@ -16,7 +16,7 @@ exports.index = asyncHandler(async (req, res) => {
     model: Roles,
     page,
     limit,
-    attributes: ["name"],
+    attributes: ["id", "name"],
   });
 
   return res.status(200).json({

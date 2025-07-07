@@ -4,13 +4,57 @@ const { paginate } = require("../utils/paginate");
 const { validateComment } = require("../validations/coomentSchema");
 
 /**
- * getAllComments - Retrieve all comments with associated user and post data.
+ * index - Retrieve all comments with associated user and post data.
  * @route GET /comments
  * @returns {Array} Array of comments with user and post details.
  */
-
 exports.index = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
   const { page = 1, limit = 10 } = req.query;
+
+  // Cari post berdasarkan slug
+  const post = await Posts.findOne({ where: { slug } });
+  if (!post) {
+    return res.status(404).json({
+      status: "error",
+      message: "Postingan tidak ditemukan",
+    });
+  }
+
+  const result = await paginate({
+    model: Comments,
+    page,
+    limit,
+    where: { postId: post.id },
+    attributes: ["id", "content", "createdAt"],
+    include: [
+      {
+        model: Users,
+        as: "user",
+        attributes: ["id", "username"],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
+
+  return res.status(200).json({
+    status: "success",
+    message: "Komentar berhasil diambil",
+    ...result,
+  });
+});
+
+/**
+ * @swagger
+ * /comments:
+ * *   get:
+ */
+
+exports.allComments = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+
+  // Ambil semua komentar tanpa filter postId
+  // Ini akan mengambil semua komentar yang ada di database
 
   const result = await paginate({
     model: Comments,
@@ -21,7 +65,7 @@ exports.index = asyncHandler(async (req, res) => {
       {
         model: Users,
         as: "user",
-        attributes: ["username", "email"],
+        attributes: ["username"],
       },
       {
         model: Posts,
@@ -29,8 +73,8 @@ exports.index = asyncHandler(async (req, res) => {
         attributes: ["title"],
       },
     ],
+    order: [["createdAt", "DESC"]],
   });
-
   return res.status(200).json({
     status: "success",
     message: "Komentar berhasil diambil",
@@ -45,12 +89,30 @@ exports.index = asyncHandler(async (req, res) => {
  * @returns {Object} The created comment with user and post details.
  */
 exports.store = asyncHandler(async (req, res) => {
-  const { content, postId } = validateComment(req.body);
+  const { slug } = req.params;
+  const { content } = req.body; // Hanya ambil content, postId dari slug
+
+  // Validasi content
+  if (!content || content.trim() === "") {
+    return res.status(400).json({
+      status: "error",
+      message: "Konten komentar wajib diisi",
+    });
+  }
+
+  // Cari post berdasarkan slug
+  const post = await Posts.findOne({ where: { slug } });
+  if (!post) {
+    return res.status(404).json({
+      status: "error",
+      message: "Postingan tidak ditemukan",
+    });
+  }
 
   const comment = await Comments.create({
-    content,
-    postId,
-    userId: req.user.id, // Assuming req.user is set by authentication middleware
+    content: content.trim(),
+    postId: post.id, // Otomatis dari slug
+    userId: req.user.id,
   });
 
   const newComment = await Comments.findByPk(comment.id, {
@@ -59,15 +121,11 @@ exports.store = asyncHandler(async (req, res) => {
       {
         model: Users,
         as: "user",
-        attributes: ["username"],
-      },
-      {
-        model: Posts,
-        as: "post",
-        attributes: ["title"],
+        attributes: ["id", "username"],
       },
     ],
   });
+
   return res.status(201).json({
     status: "success",
     message: "Komentar berhasil dibuat",
@@ -81,7 +139,6 @@ exports.store = asyncHandler(async (req, res) => {
  * @param {string} req.params.id - The ID of the comment.
  * @returns {Object} The comment with user and post details.
  */
-
 exports.show = asyncHandler(async (req, res) => {
   const comment = await Comments.findByPk(req.params.id, {
     attributes: ["id", "content", "createdAt"],
@@ -112,6 +169,7 @@ exports.show = asyncHandler(async (req, res) => {
     data: comment,
   });
 });
+
 /**
  * update - Update a specific comment by ID.
  * @route PUT /comments/:id
@@ -119,7 +177,6 @@ exports.show = asyncHandler(async (req, res) => {
  * @param {Object} req.body - The updated comment data.
  * @returns {Object} The updated comment with user and post details.
  */
-
 exports.update = asyncHandler(async (req, res) => {
   const { content } = validateComment(req.body);
 
@@ -164,13 +221,13 @@ exports.update = asyncHandler(async (req, res) => {
     data: updatedComment,
   });
 });
+
 /**
  * destroy - Delete a specific comment by ID.
  * @route DELETE /comments/:id
  * @param {string} req.params.id - The ID of the comment.
  * @returns {Object} Confirmation message.
  */
-
 exports.destroy = asyncHandler(async (req, res) => {
   const comment = await Comments.findByPk(req.params.id);
   if (!comment) {

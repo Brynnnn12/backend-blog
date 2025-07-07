@@ -6,11 +6,10 @@ const {
   show,
   update,
   destroy,
+  getMyPosts,
 } = require("../controllers/postControllers");
 const { uploadPost } = require("../utils/fileUpload");
 const { protect } = require("../middlewares/authMiddleware");
-
-router.use(protect);
 
 /**
  * @swagger
@@ -62,6 +61,8 @@ router.use(protect);
  */
 router.get("/", index);
 
+router.get("/my-posts", protect, getMyPosts); // Hanya post milik user yang login
+
 /**
  * @swagger
  * /posts:
@@ -107,7 +108,7 @@ router.get("/", index);
  *       401:
  *         description: Tidak terotentikasi
  */
-router.post("/", uploadPost.single("image"), store);
+router.post("/", protect, uploadPost.single("image"), store);
 
 /**
  * @swagger
@@ -146,7 +147,7 @@ router.post("/", uploadPost.single("image"), store);
  *       404:
  *         description: Postingan tidak ditemukan
  */
-router.get("/:slug", show);
+router.get("/:slug", protect, show);
 
 /**
  * @swagger
@@ -205,7 +206,7 @@ router.get("/:slug", show);
  *       404:
  *         description: Postingan tidak ditemukan
  */
-router.put("/:slug", uploadPost.single("image"), update);
+router.put("/:slug", protect, uploadPost.single("image"), update);
 
 /**
  * @swagger
@@ -232,6 +233,6 @@ router.put("/:slug", uploadPost.single("image"), update);
  *       404:
  *         description: Postingan tidak ditemukan
  */
-router.delete("/:slug", destroy);
+router.delete("/:slug", protect, destroy);
 
 module.exports = router;

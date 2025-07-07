@@ -8,8 +8,6 @@ const {
 } = require("../controllers/categoryController");
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
-router.use(protect);
-
 /**
  * @swagger
  * tags:
@@ -61,7 +59,7 @@ router.use(protect);
  *       403:
  *         description: Akses ditolak, hanya untuk Admin
  */
-router.get("/", authorize("Admin"), index);
+router.get("/", index);
 
 /**
  * @swagger
@@ -98,7 +96,7 @@ router.get("/", authorize("Admin"), index);
  *       403:
  *         description: Akses ditolak, hanya untuk Admin
  */
-router.post("/", authorize("Admin"), store);
+router.post("/", protect, authorize("Admin"), store);
 
 /**
  * @swagger
@@ -144,7 +142,7 @@ router.post("/", authorize("Admin"), store);
  *       404:
  *         description: Kategori tidak ditemukan
  */
-router.put("/:slug", authorize("Admin"), update);
+router.put("/:slug", protect, authorize("Admin"), update);
 
 /**
  * @swagger
@@ -171,6 +169,6 @@ router.put("/:slug", authorize("Admin"), update);
  *       404:
  *         description: Kategori tidak ditemukan
  */
-router.delete("/:slug", authorize("Admin"), destroy);
+router.delete("/:slug", protect, authorize("Admin"), destroy);
 
 module.exports = router;

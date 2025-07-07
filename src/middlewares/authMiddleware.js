@@ -20,11 +20,19 @@ const sendErrorResponse = (res, statusCode, code, message) => {
  * Middleware untuk memproteksi route yang memerlukan autentikasi
  */
 exports.protect = asyncHandler(async (req, res, next) => {
-  // Periksa keberadaan token
-  if (
-    !req.headers.authorization ||
-    !req.headers.authorization.startsWith("Bearer ")
+  let token;
+
+  // ✅ Ambil token dari cookie ATAU Authorization header
+  if (req.cookies && req.cookies.jwt) {
+    token = req.cookies.jwt;
+  } else if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
   ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
     return sendErrorResponse(
       res,
       401,
@@ -32,9 +40,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
       "Silahkan login terlebih dahulu untuk mengakses fitur ini."
     );
   }
-
-  // Ekstrak token
-  const token = req.headers.authorization.split(" ")[1];
 
   try {
     // Verifikasi token
@@ -49,7 +54,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
       },
     });
 
-    // Validasi user ada
     if (!user) {
       return sendErrorResponse(
         res,
@@ -59,7 +63,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // Simpan data user di request
     req.user = {
       id: user.id,
       username: user.username,
@@ -69,7 +72,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
     next();
   } catch (error) {
-    // Handle error spesifik
     if (error.name === "JsonWebTokenError") {
       return sendErrorResponse(
         res,
@@ -88,7 +90,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
       );
     }
 
-    // Error yang tidak terduga
     console.error("Auth error:", error);
     return sendErrorResponse(
       res,
